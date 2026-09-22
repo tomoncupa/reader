@@ -8,490 +8,237 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Reader">
 <meta name="theme-color" content="#111111">
+<meta name="reader-version" content="2.0.0, 2026-09-22">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.json">
 <title>Reader</title>
 <style>
-:root{--bg:#111;--ink:#f2efe6;--mut:#8f8a7e;--acc:#f0b323;--panel:#1e1e1e;--line:#353535}
-body[data-theme=light]{--bg:#fff;--ink:#111;--mut:#666;--acc:#a86f00;--panel:#f1f1f1;--line:#ddd}
-body[data-theme=sepia]{--bg:#f4ecd8;--ink:#35291a;--mut:#7a6a52;--acc:#9a5b00;--panel:#e9ddc2;--line:#d3c4a2}
+:root{--bg:#111;--ink:#f2efe6;--mut:#9a958a;--acc:#f0b323;--acc-ink:#111;--panel:#1e1e1e;--line:#383838;--hl:rgba(240,179,35,.33);--tts:rgba(90,170,255,.35);--fs:44px;--fw:600;--lh:1.45;--mx:44px;--ff:-apple-system,system-ui,sans-serif}
+body[data-theme=black]{--bg:#000;--ink:#fff;--mut:#9a9a9a;--panel:#161616;--line:#333}
+body[data-theme=light]{--bg:#fff;--ink:#111;--mut:#666;--acc:#a86f00;--acc-ink:#fff;--panel:#f1f1f1;--line:#d6d6d6;--hl:rgba(255,200,0,.45);--tts:rgba(40,120,255,.25)}
+body[data-theme=sepia]{--bg:#f4ecd8;--ink:#35291a;--mut:#7a6a52;--acc:#9a5b00;--acc-ink:#fff;--panel:#e9ddc2;--line:#d3c4a2;--hl:rgba(255,190,0,.45);--tts:rgba(40,120,255,.22)}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:-apple-system,system-ui,"Segoe UI",sans-serif;-webkit-text-size-adjust:100%;overscroll-behavior:none}
 body{overflow:hidden}
-button{font:inherit;color:inherit;background:var(--panel);border:2px solid var(--line);border-radius:14px;min-height:64px;min-width:64px;padding:0 20px;font-size:24px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button,select,input,textarea{font:inherit;color:inherit}
+button{background:var(--panel);border:2px solid var(--line);border-radius:14px;min-height:60px;min-width:60px;padding:0 18px;font-size:21px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
 button:active{transform:scale(.97)}
+button.pri{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+button.small{min-height:48px;font-size:18px;padding:0 14px}
+button.wide{width:100%;margin:8px 0}
+input,select,textarea{background:var(--bg);border:2px solid var(--line);border-radius:12px;font-size:21px;padding:12px 14px;min-height:56px;width:100%}
+textarea{min-height:120px;resize:vertical}
 [hidden]{display:none!important}
+.mut{color:var(--mut)}
+.row{display:flex;gap:10px;align-items:center;margin:10px 0}
+.row input{flex:1;min-width:0}
 
 /* library */
-#lib{position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(env(safe-area-inset-top) + 28px) 28px calc(env(safe-area-inset-bottom) + 28px)}
-#lib h1{font-size:44px;margin:0 0 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-#add{background:var(--acc);color:#111;border-color:var(--acc)}
-.book{display:flex;align-items:center;gap:16px;border-bottom:2px solid var(--line);padding:18px 0}
-.book .go{flex:1;text-align:left;background:none;border:0;padding:0;min-height:80px;display:block}
-.book .t{font-size:30px;font-weight:700;line-height:1.2}
-.book .a{font-size:22px;color:var(--mut);font-weight:500;margin-top:4px}
-.book .del{font-size:20px;color:var(--mut)}
-#empty{font-size:26px;color:var(--mut);line-height:1.5;max-width:30em}
-#busy{font-size:24px;color:var(--acc);margin:16px 0}
+#lib{position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(env(safe-area-inset-top) + 24px) 24px calc(env(safe-area-inset-bottom) + 40px)}
+#lib header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+#lib h1{font-size:40px;margin:0;flex:1}
+#syncdot{font-size:16px;color:var(--mut);border:2px solid var(--line);border-radius:99px;padding:4px 12px}
+.filters{display:flex;gap:10px;margin-bottom:12px}
+.filters input{flex:1;min-width:0}
+.filters select{width:auto}
+#shelves{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.chip{min-height:48px;border-radius:99px;font-size:18px}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:26px 22px}
+.card .cover{display:block;width:100%;aspect-ratio:2/3;padding:0;border-radius:10px;overflow:hidden;position:relative;background:var(--panel)}
+.card .cover img{width:100%;height:100%;object-fit:cover;display:block}
+.card .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:14px;font-size:22px;line-height:1.25;text-align:center;font-weight:700;background:linear-gradient(160deg,var(--panel),var(--line))}
+.card .prog{position:absolute;left:0;right:0;bottom:0;height:7px;background:rgba(0,0,0,.35)}
+.card .prog i{display:block;height:100%;background:var(--acc)}
+.card.away .cover{opacity:.55}
+.card .meta{display:flex;gap:6px;align-items:flex-start;margin-top:10px}
+.card .go{flex:1;min-width:0;text-align:left;background:none;border:0;padding:0;min-height:0;display:block}
+.card .t{font-size:21px;font-weight:700;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.card .a{font-size:17px;color:var(--mut);font-weight:500;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .s{font-size:16px;color:var(--mut);font-weight:500;margin-top:3px}
+.card .dots{min-width:48px;min-height:48px;padding:0;font-size:16px;letter-spacing:1px}
+#empty{font-size:24px;color:var(--mut);line-height:1.5;max-width:32em}
+#busy{font-size:22px;color:var(--acc);margin:12px 0}
 
-/* reader */
-#page{position:fixed;inset:0;overflow:hidden;padding:calc(env(safe-area-inset-top) + 24px) 44px calc(env(safe-area-inset-bottom) + 40px);touch-action:none;user-select:none;-webkit-user-select:none}
-#flow{column-fill:auto;font-size:var(--fs,44px);line-height:1.45;font-weight:var(--fw,500);hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word;text-align:left}
-#flow *{font-size:inherit;line-height:inherit;font-family:inherit;color:inherit;background:none!important;max-width:100%}
+/* reading */
+#page{position:fixed;inset:0;overflow:hidden;padding:calc(env(safe-area-inset-top) + 30px) var(--mx) calc(env(safe-area-inset-bottom) + 48px);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+body.selectable #flow{user-select:text;-webkit-user-select:text;-webkit-touch-callout:default}
+#flow{column-fill:auto;font-family:var(--ff);font-size:var(--fs);line-height:var(--lh);font-weight:var(--fw);hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word;text-align:left;will-change:transform}
+body.justify #flow{text-align:justify}
+#flow *{font-size:inherit;line-height:inherit;font-family:inherit;color:inherit;background:none!important;max-width:100%;border-color:var(--line)}
 #flow p,#flow div{margin:0 0 .55em;text-indent:0}
 #flow h1,#flow h2,#flow h3,#flow h4,#flow h5,#flow h6{font-size:1.2em;line-height:1.25;margin:.2em 0 .6em;font-weight:800;break-after:avoid}
+#flow b,#flow strong{font-weight:800}
 #flow img{display:block;max-width:100%;max-height:calc(var(--ph) - 1em);height:auto;width:auto;margin:0 auto .5em;break-inside:avoid;object-fit:contain}
-#flow a{pointer-events:none;text-decoration:none}
+#flow a{color:inherit;text-decoration:underline;text-decoration-color:var(--acc);text-decoration-thickness:2px;text-underline-offset:4px}
 #flow pre{white-space:pre-wrap}
+#flow blockquote{margin:0 0 .55em 1em}
+#flow ul,#flow ol{padding-left:1.2em;margin:0 0 .55em}
 #flow table{border-collapse:collapse}
-#flow sup,#flow sub{font-size:.6em}
-#bar{position:fixed;left:0;right:0;bottom:0;height:calc(env(safe-area-inset-bottom) + 10px);pointer-events:none}
-#fill{height:6px;background:var(--acc);width:0;opacity:.8}
-#pct{position:fixed;right:20px;bottom:calc(env(safe-area-inset-bottom) + 10px);font-size:18px;color:var(--mut);pointer-events:none;font-variant-numeric:tabular-nums}
+#flow td,#flow th{padding:0 .3em}
+#flow sup,#flow sub{font-size:.6em;line-height:0}
+#flow hr{border:0;height:auto;margin:.4em 0;text-align:center;break-after:avoid}
+#flow hr::after{content:"* * *";color:var(--mut)}
+#flow mark{color:inherit}
+#flow mark.hl{background:var(--hl)!important;border-radius:4px}
+#flow mark.hl.has-note{text-decoration:underline dotted var(--acc) 3px;text-underline-offset:6px}
+#flow mark.found{background:var(--tts)!important}
+::highlight(tts){background-color:var(--tts)}
+::highlight(found){background-color:var(--tts)}
+#flow.fixed{columns:auto}
+#flow .fx{position:relative;width:100%;height:100%;overflow:hidden;margin:0}
+#flow .fx img{width:100%;height:100%;max-height:none;object-fit:contain;margin:0}
+#flow .fx iframe{position:absolute;top:0;border:0;transform-origin:0 0;pointer-events:none;background:#fff}
 
-#tools{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 16px) 20px 20px;background:var(--panel);border-bottom:2px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.35)}
-#tools .info{flex-basis:100%;font-size:20px;color:var(--mut);line-height:1.4}
-#tools .info b{color:var(--ink)}
-#fsz{font-size:22px;min-width:3.5em;text-align:center;font-variant-numeric:tabular-nums}
-#toast{position:fixed;left:50%;top:40%;transform:translateX(-50%);background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:18px 26px;font-size:26px;pointer-events:none;opacity:0;transition:opacity .3s}
+#status{position:fixed;left:var(--mx);right:var(--mx);bottom:calc(env(safe-area-inset-bottom) + 12px);display:flex;gap:16px;font-size:18px;color:var(--mut);pointer-events:none;font-variant-numeric:tabular-nums;font-family:-apple-system,system-ui,sans-serif}
+#left{flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#bar{position:fixed;left:0;right:0;bottom:0;height:5px;pointer-events:none}
+#fill{height:100%;background:var(--acc);width:0;opacity:.85}
+#autobar{position:fixed;left:0;top:0;height:5px;width:0;background:var(--acc);opacity:.7;pointer-events:none}
+#ribbon{position:fixed;top:0;right:calc(var(--mx) / 2 + 6px);width:26px;height:44px;background:var(--acc);clip-path:polygon(0 0,100% 0,100% 100%,50% 75%,0 100%);pointer-events:none}
+#lockbadge{display:none;position:fixed;top:calc(env(safe-area-inset-top) + 4px);left:50%;transform:translateX(-50%);font-size:16px;color:var(--mut);border:2px solid var(--line);border-radius:99px;padding:2px 14px;pointer-events:none}
+body.locked #lockbadge{display:block}
+#backbtn{position:fixed;left:16px;bottom:calc(env(safe-area-inset-bottom) + 50px);box-shadow:0 6px 20px rgba(0,0,0,.35)}
+
+#tools{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 14px) 16px 16px;background:var(--panel);border-bottom:2px solid var(--line);box-shadow:0 8px 30px rgba(0,0,0,.35);font-family:-apple-system,system-ui,sans-serif}
+.trow{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.trow button{flex:1 1 auto}
+.slide{display:flex;align-items:center;gap:14px;margin:6px 0 10px}
+.slide input{flex:1;min-height:44px;padding:0;border:0;background:none;accent-color:var(--acc)}
+#sliderlab{font-size:20px;min-width:3em;text-align:right;font-variant-numeric:tabular-nums}
+.info{font-size:18px;color:var(--mut);line-height:1.45}
+.info b{color:var(--ink)}
+
+#selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 60px);display:flex;gap:8px;padding:10px;background:var(--panel);border:2px solid var(--line);border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,.4);font-family:-apple-system,system-ui,sans-serif}
+
+/* panels */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45)}
+.sheet{position:fixed;top:0;right:0;bottom:0;width:min(640px,100%);background:var(--panel);border-left:2px solid var(--line);display:flex;flex-direction:column;font-family:-apple-system,system-ui,sans-serif;font-size:21px;line-height:1.4;box-shadow:-10px 0 40px rgba(0,0,0,.35)}
+.shead{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top) + 14px) 20px 12px;border-bottom:2px solid var(--line)}
+.shead h2{flex:1;margin:0;font-size:26px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sbody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 20px calc(env(safe-area-inset-bottom) + 30px)}
+.sbody h3{font-size:22px;margin:22px 0 8px}
+.item{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:2px solid var(--line);border-radius:0;padding:14px 8px;font-weight:500;min-height:60px}
+.item.cur{color:var(--acc);font-weight:800}
+.item.result{font-size:19px}
+.item.result b{color:var(--acc)}
+.mark{display:flex;gap:8px;align-items:center;border-bottom:2px solid var(--line)}
+.mark .item{border:0;flex:1;min-width:0}
+.quote{font-style:italic}
+.notetxt{color:var(--acc);margin-top:4px}
+.note-text{font-size:26px;line-height:1.5}
+blockquote{margin:0 0 14px;padding-left:14px;border-left:4px solid var(--acc);font-style:italic}
+.setrow{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:2px solid var(--line)}
+.setrow .lab{flex:1}
+.setrow .val{min-width:4.2em;text-align:center;font-variant-numeric:tabular-nums;font-weight:700}
+.setblock{padding:10px 0;border-bottom:2px solid var(--line)}
+.setblock .lab{margin-bottom:8px}
+.choices{display:flex;flex-wrap:wrap;gap:8px}
+.tog{min-width:90px}
+.tog.on{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:6px 0 10px}
+.stats div{background:var(--bg);border-radius:14px;padding:14px}
+.stats b{display:block;font-size:30px}
+.stats span{color:var(--mut);font-size:18px}
+.bars{display:flex;align-items:flex-end;gap:6px;height:160px;padding-top:10px}
+.bar{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px}
+.bar i{display:block;width:100%;background:var(--acc);border-radius:6px 6px 0 0;min-height:2px}
+.bar span{font-size:15px;color:var(--mut)}
+.sess{display:flex;gap:12px;justify-content:space-between;padding:10px 0;border-bottom:2px solid var(--line);font-size:18px}
+.sess span:nth-child(2){flex:1;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+details{margin-top:20px}
+summary{font-weight:700;min-height:44px;cursor:pointer}
+pre{white-space:pre-wrap;background:var(--bg);padding:12px;border-radius:10px;font-size:17px}
+#toast{position:fixed;left:50%;top:40%;transform:translateX(-50%);background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:18px 26px;font-size:24px;pointer-events:none;opacity:0;transition:opacity .3s;max-width:90vw;text-align:center;font-family:-apple-system,system-ui,sans-serif;z-index:5}
 #toast.on{opacity:1}
 </style>
+<style id="bookcss"></style>
 </head>
 <body>
 
 <div id="lib">
-  <h1>Reader <button id="add">Add book</button></h1>
-  <input id="file" type="file" accept=".epub,application/epub+zip" multiple hidden>
+  <header>
+    <h1>Reader</h1>
+    <span id="syncdot" hidden>Sync on</span>
+    <button id="libset">Settings</button>
+    <button id="add" class="pri">Add book</button>
+  </header>
+  <input id="file" type="file" multiple hidden>
+  <div class="filters">
+    <input id="q" type="search" placeholder="Search your books">
+    <select id="sort" aria-label="Sort">
+      <option value="recent">Recently read</option>
+      <option value="title">Title</option>
+      <option value="author">Author</option>
+      <option value="added">Recently added</option>
+      <option value="progress">Most read</option>
+    </select>
+  </div>
+  <div id="shelves"></div>
   <div id="busy" hidden></div>
-  <div id="list"></div>
-  <p id="empty" hidden>No books yet. Tap Add book and pick an EPUB from Files. It is kept on this iPad, so it opens with no signal.</p>
+  <div id="list" class="grid"></div>
+  <p id="empty" hidden>No books yet. Tap Add book and pick an EPUB, PDF, MOBI, AZW3, comic (CBZ) or text file from Files. Books are kept on this iPad, so they open with no signal.</p>
 </div>
 
 <div id="read" hidden>
   <div id="page"><div id="flow"></div></div>
+  <div id="autobar" hidden></div>
+  <div id="ribbon" hidden></div>
+  <div id="lockbadge">Locked: hold the screen for 2 seconds to unlock</div>
+  <div id="status"><span id="clock"></span><span id="left"></span><span id="pct"></span></div>
   <div id="bar"><div id="fill"></div></div>
-  <div id="pct"></div>
+  <button id="backbtn" hidden>Back</button>
   <div id="tools" hidden>
-    <button id="back">Library</button>
-    <button id="smaller" aria-label="Smaller text">A−</button>
-    <span id="fsz"></span>
-    <button id="bigger" aria-label="Bigger text">A+</button>
-    <button id="weight">Bold</button>
-    <button id="theme">Theme</button>
-    <button id="prevch">◀ Chapter</button>
-    <button id="nextch">Chapter ▶</button>
-    <div class="info"><span id="where"></span><br>Remote: <b id="lastkey">press a button to test it</b></div>
+    <div class="trow">
+      <button id="t-lib">Library</button>
+      <button id="t-toc">Contents</button>
+      <button id="t-search">Search</button>
+      <button id="t-mark">Bookmark</button>
+      <button id="t-marks">Notes</button>
+      <button id="t-text">Text</button>
+    </div>
+    <div class="trow">
+      <button id="t-read">Read aloud</button>
+      <button id="t-auto">Auto turn</button>
+      <button id="t-lock">Lock screen</button>
+      <button id="t-more">More</button>
+    </div>
+    <div class="slide"><input id="slider" type="range" min="0" max="1000" aria-label="Go to a point in the book"><span id="sliderlab"></span></div>
+    <div class="info"><b id="booktitle"></b><br><span id="where"></span><br>Remote: <b class="lastkey">press a button to test it</b></div>
+  </div>
+  <div id="selbar" hidden>
+    <button id="sel-hl" class="pri">Highlight</button>
+    <button id="sel-note">Note</button>
+    <button id="sel-def">Define</button>
+    <button id="sel-copy">Copy</button>
+    <button id="sel-x">Cancel</button>
   </div>
 </div>
+<div id="sheets"></div>
 <div id="toast"></div>
 
+<script src="js/data.js"></script>
+<script src="js/formats.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/reader.js"></script>
+<script src="js/library.js"></script>
 <script>
 'use strict';
-const $ = id => document.getElementById(id);
-const store = {
-  get(k, d) { try { const v = localStorage.getItem('reader.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem('reader.' + k, JSON.stringify(v)); } catch (e) {} },
-  del(k) { try { localStorage.removeItem('reader.' + k); } catch (e) {} }
-};
-const set = Object.assign({ fs: 44, theme: 'dark', bold: true }, store.get('settings', {}));
-function saveSet() { store.set('settings', set); }
-
-/* ---------- books live in IndexedDB ---------- */
-let dbp;
-function db() {
-  return dbp || (dbp = new Promise((ok, no) => {
-    const r = indexedDB.open('reader', 1);
-    r.onupgradeneeded = () => r.result.createObjectStore('books', { keyPath: 'id' });
-    r.onsuccess = () => ok(r.result);
-    r.onerror = () => no(r.error);
-  }));
-}
-async function tx(mode, fn) {
-  const d = await db();
-  return new Promise((ok, no) => {
-    const t = d.transaction('books', mode), s = t.objectStore('books');
-    const r = fn(s);
-    t.oncomplete = () => ok(r && r.result);
-    t.onerror = () => no(t.error);
-  });
-}
-const allBooks = () => tx('readonly', s => s.getAll());
-const getBook = id => tx('readonly', s => s.get(id));
-const putBook = b => tx('readwrite', s => s.put(b));
-const delBook = id => tx('readwrite', s => s.delete(id));
-
-/* ---------- a small unzip, using the browser's own inflater ---------- */
-async function unzip(buf) {
-  const u8 = new Uint8Array(buf), dv = new DataView(buf), td = new TextDecoder();
-  let e = -1;
-  for (let i = u8.length - 22; i >= Math.max(0, u8.length - 65557); i--) {
-    if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
-  }
-  if (e < 0) throw new Error('This file is not an EPUB.');
-  const n = dv.getUint16(e + 10, true);
-  let p = dv.getUint32(e + 16, true);
-  const files = new Map();
-  for (let k = 0; k < n; k++) {
-    if (dv.getUint32(p, true) !== 0x02014b50) break;
-    const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true),
-      usize = dv.getUint32(p + 24, true), nl = dv.getUint16(p + 28, true),
-      xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true);
-    files.set(td.decode(u8.subarray(p + 46, p + 46 + nl)), { method, csize, usize, lo });
-    p += 46 + nl + xl + cl;
-  }
-  const find = name => files.get(name) || [...files.entries()].find(([k]) => k.toLowerCase() === name.toLowerCase())?.[1];
-  return {
-    files, find,
-    async bytes(name) {
-      const f = find(name);
-      if (!f) return null;
-      const s = f.lo + 30 + dv.getUint16(f.lo + 26, true) + dv.getUint16(f.lo + 28, true);
-      const raw = u8.subarray(s, s + f.csize);
-      if (f.method === 0) return raw;
-      if (f.method !== 8) throw new Error('Unsupported compression in this EPUB.');
-      const out = new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-      return new Uint8Array(await new Response(out).arrayBuffer());
-    },
-    async text(name) { const b = await this.bytes(name); return b ? td.decode(b) : null; }
-  };
-}
-
-const xml = s => new DOMParser().parseFromString(s, 'application/xml');
-const tags = (doc, name) => [...doc.getElementsByTagNameNS('*', name)];
-const dirOf = p => p.includes('/') ? p.slice(0, p.lastIndexOf('/') + 1) : '';
-function join(base, href) {
-  href = href.split('#')[0];
-  try { href = decodeURIComponent(href); } catch (e) {}
-  const out = [];
-  for (const part of (base + href).split('/')) {
-    if (part === '..') out.pop(); else if (part && part !== '.') out.push(part);
-  }
-  return out.join('/');
-}
-const MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', svg: 'image/svg+xml', webp: 'image/webp' };
-
-async function parseEpub(buf) {
-  const z = await unzip(buf);
-  const cx = xml(await z.text('META-INF/container.xml') || '');
-  const rf = tags(cx, 'rootfile')[0];
-  if (!rf) throw new Error('This EPUB has no table of contents file.');
-  const opfPath = rf.getAttribute('full-path');
-  const opf = xml(await z.text(opfPath));
-  const base = dirOf(opfPath), man = {};
-  for (const it of tags(opf, 'item')) man[it.getAttribute('id')] = { href: join(base, it.getAttribute('href')), type: it.getAttribute('media-type') || '' };
-  const spine = [];
-  for (const r of tags(opf, 'itemref')) {
-    if (r.getAttribute('linear') === 'no') continue;
-    const m = man[r.getAttribute('idref')];
-    if (m && /html/.test(m.type)) spine.push(m.href);
-  }
-  if (!spine.length) throw new Error('This EPUB has no chapters.');
-  const first = n => (tags(opf, n)[0] || {}).textContent;
-  return {
-    z, spine,
-    title: (first('title') || 'Untitled').trim(),
-    author: (first('creator') || '').trim(),
-    sizes: spine.map(h => Math.max(1, (z.find(h) || {}).usize || 1))
-  };
-}
-
-/* ---------- library ---------- */
-async function drawLib() {
-  const books = (await allBooks()).sort((a, b) => (store.get('seen.' + b.id, 0) - store.get('seen.' + a.id, 0)) || b.added - a.added);
-  const list = $('list');
-  list.innerHTML = '';
-  $('empty').hidden = books.length > 0;
-  for (const b of books) {
-    const pos = store.get('pos.' + b.id);
-    const row = document.createElement('div');
-    row.className = 'book';
-    const go = document.createElement('button');
-    go.className = 'go';
-    go.innerHTML = '<div class="t"></div><div class="a"></div>';
-    go.querySelector('.t').textContent = b.title;
-    go.querySelector('.a').textContent = [b.author, pos ? Math.round(pos.p * 100) + '% read' : 'Not started'].filter(Boolean).join(' · ');
-    go.onclick = () => openBook(b.id);
-    const del = document.createElement('button');
-    del.className = 'del';
-    del.textContent = 'Remove';
-    del.onclick = async () => {
-      if (!confirm('Remove "' + b.title + '" from this iPad?')) return;
-      await delBook(b.id);
-      store.del('pos.' + b.id); store.del('seen.' + b.id);
-      if (store.get('last') === b.id) store.del('last');
-      drawLib();
-    };
-    row.append(go, del);
-    list.append(row);
-  }
-}
-$('add').onclick = () => $('file').click();
-$('file').onchange = async e => {
-  const files = [...e.target.files];
-  e.target.value = '';
-  for (const f of files) {
-    $('busy').hidden = false;
-    $('busy').textContent = 'Adding ' + f.name + '…';
-    try {
-      const data = await f.arrayBuffer();
-      const b = await parseEpub(data);
-      const id = (b.title + '|' + b.author + '|' + data.byteLength).replace(/\s+/g, ' ');
-      await putBook({ id, title: b.title, author: b.author, data, added: Date.now() });
-    } catch (err) {
-      alert(f.name + ': ' + (err.message || err));
-    }
-  }
-  $('busy').hidden = true;
-  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-  drawLib();
-};
-
-/* ---------- reader ---------- */
-const page = $('page'), flow = $('flow');
-let B = null, bookId = null, ch = 0, pg = 0, pages = 1, step = 1, gap = 0, urls = [], loading = false;
-
-function applySet() {
-  document.body.dataset.theme = set.theme;
-  document.documentElement.style.setProperty('--fs', set.fs + 'px');
-  document.documentElement.style.setProperty('--fw', set.bold ? 600 : 400);
-  $('fsz').textContent = set.fs + 'px';
-  $('weight').textContent = set.bold ? 'Bold: on' : 'Bold: off';
-  const m = document.querySelector('meta[name=theme-color]');
-  if (m) m.content = getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#111';
-}
-
-async function openBook(id) {
-  const rec = await getBook(id);
-  if (!rec) { store.del('last'); return drawLib(); }
-  try { B = await parseEpub(rec.data); } catch (e) { alert(e.message || e); return; }
-  B.total = B.sizes.reduce((a, b) => a + b, 0);
-  bookId = id;
-  store.set('last', id);
-  store.set('seen.' + id, Date.now());
-  $('lib').hidden = true;
-  $('read').hidden = false;
-  $('tools').hidden = true;
-  const pos = store.get('pos.' + id, { ch: 0, f: 0 });
-  await loadChapter(Math.min(pos.ch || 0, B.spine.length - 1), pos.f || 0);
-  wake();
-}
-
-function closeBook() {
-  save();
-  B = null; bookId = null;
-  urls.forEach(u => URL.revokeObjectURL(u)); urls = [];
-  flow.innerHTML = '';
-  $('read').hidden = true;
-  $('lib').hidden = false;
-  unwake();
-  drawLib();
-}
-
-async function chapterNode(i) {
-  const path = B.spine[i], src = await B.z.text(path) || '';
-  let doc = new DOMParser().parseFromString(src, 'application/xhtml+xml');
-  if (doc.getElementsByTagName('parsererror').length) doc = new DOMParser().parseFromString(src, 'text/html');
-  const body = doc.body || tags(doc, 'body')[0];
-  const frag = document.createElement('div');
-  if (!body) return frag;
-  for (const n of [...body.childNodes]) frag.append(document.importNode(n, true));
-  frag.querySelectorAll('script,style,link,meta,iframe,object,embed,form,input,button,audio,video').forEach(n => n.remove());
-  // an svg wrapping a single picture (usually a cover) becomes a plain picture
-  for (const svg of [...frag.querySelectorAll('svg')]) {
-    const im = svg.querySelector('image');
-    if (!im) continue;
-    const img = document.createElement('img');
-    img.setAttribute('src', im.getAttribute('href') || im.getAttribute('xlink:href') || im.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || '');
-    svg.replaceWith(img);
-  }
-  for (const el of frag.querySelectorAll('*')) {
-    for (const a of [...el.attributes]) if (/^on|^style$|^width$|^height$|^align$/i.test(a.name)) el.removeAttribute(a.name);
-  }
-  const dir = dirOf(path);
-  await Promise.all([...frag.querySelectorAll('img')].map(async img => {
-    const p = join(dir, img.getAttribute('src') || '');
-    const bytes = p && await B.z.bytes(p).catch(() => null);
-    if (!bytes) { img.remove(); return; }
-    const u = URL.createObjectURL(new Blob([bytes], { type: MIME[p.split('.').pop().toLowerCase()] || '' }));
-    urls.push(u);
-    img.src = u;
-    img.alt = '';
-  }));
-  return frag;
-}
-
-async function loadChapter(i, f) {
-  if (loading) return;
-  loading = true;
-  try {
-    ch = i;
-    const node = await chapterNode(i);
-    urls.forEach(u => { if (!node.querySelector('img[src="' + u + '"]')) URL.revokeObjectURL(u); });
-    urls = [...node.querySelectorAll('img')].map(im => im.src);
-    flow.innerHTML = '';
-    flow.append(...node.childNodes);
-    if (!flow.textContent.trim() && !flow.querySelector('img')) flow.innerHTML = '<p>&nbsp;</p>';
-    const imgs = [...flow.querySelectorAll('img')];
-    await Promise.race([Promise.all(imgs.map(im => im.decode().catch(() => {}))), new Promise(r => setTimeout(r, 1500))]);
-    layout(f);
-  } finally { loading = false; }
-}
-
-function layout(f) {
-  if (!B) return;
-  if (f == null) f = pages > 1 ? pg / pages : 0;
-  const cs = getComputedStyle(page);
-  const pl = parseFloat(cs.paddingLeft), pr = parseFloat(cs.paddingRight),
-    pt = parseFloat(cs.paddingTop), pb = parseFloat(cs.paddingBottom);
-  const w = page.clientWidth - pl - pr, h = page.clientHeight - pt - pb;
-  gap = pl + pr; step = w + gap;
-  flow.style.transform = 'none';
-  flow.style.width = w + 'px';
-  flow.style.height = h + 'px';
-  flow.style.columnWidth = w + 'px';
-  flow.style.columnGap = gap + 'px';
-  document.documentElement.style.setProperty('--ph', h + 'px');
-  // how far the text runs to the right, measured two ways because browsers disagree
-  const left = flow.getBoundingClientRect().left;
-  let right = flow.scrollWidth;
-  const r = document.createRange();
-  r.selectNodeContents(flow);
-  for (const rc of r.getClientRects()) right = Math.max(right, rc.right - left);
-  pages = Math.max(1, Math.ceil((right + gap - 2) / step));
-  pg = f >= 1 ? pages - 1 : Math.min(pages - 1, Math.floor(f * pages + 1e-6));
-  show();
-}
-
-function show() {
-  flow.style.transform = 'translateX(' + (-pg * step) + 'px)';
-  let before = 0;
-  for (let i = 0; i < ch; i++) before += B.sizes[i];
-  const p = (before + B.sizes[ch] * (pg + 1) / pages) / B.total;
-  $('fill').style.width = (p * 100).toFixed(2) + '%';
-  $('pct').textContent = Math.floor(p * 100) + '%';
-  $('where').textContent = B.title + ' · chapter ' + (ch + 1) + ' of ' + B.spine.length + ' · page ' + (pg + 1) + ' of ' + pages + ' in this chapter';
-  save(p);
-}
-
-function save(p) {
-  if (!B || !bookId) return;
-  const old = store.get('pos.' + bookId, {});
-  store.set('pos.' + bookId, { ch, f: pages > 1 ? pg / pages : 0, p: p == null ? old.p || 0 : p, t: Date.now() });
-}
-
-async function next() {
-  if (!B || loading) return;
-  if (pg < pages - 1) { pg++; show(); }
-  else if (ch < B.spine.length - 1) await loadChapter(ch + 1, 0);
-  else toast('The end');
-}
-async function prev() {
-  if (!B || loading) return;
-  if (pg > 0) { pg--; show(); }
-  else if (ch > 0) await loadChapter(ch - 1, 1);
-  else toast('Start of the book');
-}
-
 let toastT;
 function toast(s) {
   const t = $('toast');
   t.textContent = s; t.classList.add('on');
-  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1200);
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1600);
 }
-
-function fontBy(d) {
-  set.fs = Math.max(20, Math.min(120, set.fs + d));
-  saveSet(); applySet();
-  if (B) layout();
-  toast(set.fs + 'px');
-}
-
-/* toolbar */
-$('back').onclick = closeBook;
-$('smaller').onclick = () => fontBy(-4);
-$('bigger').onclick = () => fontBy(4);
-$('weight').onclick = () => { set.bold = !set.bold; saveSet(); applySet(); if (B) layout(); };
-$('theme').onclick = () => {
-  const order = ['dark', 'sepia', 'light'];
-  set.theme = order[(order.indexOf(set.theme) + 1) % order.length];
-  saveSet(); applySet();
-};
-$('prevch').onclick = () => { if (B && ch > 0) loadChapter(ch - 1, 0); };
-$('nextch').onclick = () => { if (B && ch < B.spine.length - 1) loadChapter(ch + 1, 0); };
-const toggleTools = force => { $('tools').hidden = force != null ? !force : !$('tools').hidden; };
-
-/* ---------- the remote: it is a keyboard to the iPad ---------- */
-const NEXT = ['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Spacebar', 'Enter', 'n', 'N', 'j', 'MediaTrackNext', 'MediaFastForward', 'AudioVolumeUp'];
-const PREV = ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace', 'p', 'P', 'k', 'MediaTrackPrevious', 'MediaRewind', 'AudioVolumeDown'];
-document.addEventListener('keydown', e => {
-  if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
-  const k = e.key;
-  $('lastkey').textContent = k === ' ' ? 'Space' : k;
-  if ($('read').hidden) {
-    if (k === 'Enter' && store.get('last')) { e.preventDefault(); openBook(store.get('last')); }
-    return;
-  }
-  let dir = 0;
-  if (NEXT.includes(k)) dir = (k === ' ' && e.shiftKey) ? -1 : 1;
-  else if (PREV.includes(k)) dir = -1;
-  else if (k === '+' || k === '=') { e.preventDefault(); return fontBy(4); }
-  else if (k === '-' || k === '_') { e.preventDefault(); return fontBy(-4); }
-  else if (k === 'Escape') { e.preventDefault(); return toggleTools(); }
-  if (!dir) return;
-  e.preventDefault();
-  if (e.repeat) return;       // a held button turns one page, not twenty
-  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
-  dir > 0 ? next() : prev();
-}, true);
-
-/* touch: tap the sides to turn, the middle for the menu, or swipe */
-let sx = 0, sy = 0, st = 0;
-page.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; st = Date.now(); });
-page.addEventListener('pointerup', e => {
-  const dx = e.clientX - sx, dy = e.clientY - sy;
-  if (Math.abs(dx) > 40 || Math.abs(dy) > 40) {
-    if (Math.abs(dx) > Math.abs(dy)) dx < 0 ? next() : prev();
-    else dy < 0 ? next() : prev();
-    return;
-  }
-  const w = page.clientWidth;
-  if (!$('tools').hidden) return toggleTools(false);
-  if (e.clientX < w * 0.3) prev();
-  else if (e.clientX > w * 0.7) next();
-  else toggleTools(true);
-});
-let wheelSum = 0, wheelT = 0;
-page.addEventListener('wheel', e => {
-  e.preventDefault();
-  wheelSum += Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
-  if (Date.now() - wheelT < 400 || Math.abs(wheelSum) < 40) return;
-  wheelT = Date.now();
-  wheelSum > 0 ? next() : prev();
-  wheelSum = 0;
-}, { passive: false });
-
-/* keep the screen on while reading */
-let lock = null;
-async function wake() {
-  try { if ('wakeLock' in navigator && !lock) { lock = await navigator.wakeLock.request('screen'); lock.addEventListener('release', () => { lock = null; }); } } catch (e) {}
-}
-function unwake() { if (lock) lock.release().catch(() => {}); lock = null; }
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && B) wake();
-  if (document.visibilityState === 'hidden') save();
-});
-window.addEventListener('pagehide', () => save());
-
-let resizeT;
-window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => layout(), 150); });
-
-/* ---------- start ---------- */
+$('t-read').onclick = () => ttsToggle();
+$('t-auto').onclick = () => autoToggle();
 applySet();
 if (location.protocol.startsWith('http') && 'serviceWorker' in navigator && !/nosw/.test(location.search)) navigator.serviceWorker.register('sw.js').catch(() => {});
 (async () => {
+  if (Sync.on()) await Promise.race([Sync.cycle(), wait(3000)]);
   await drawLib();
   const last = store.get('last');
-  if (last && !/library/.test(location.hash)) openBook(last);
+  if (last && !/library/.test(location.hash) && await DB.hasFile(last)) openBookById(last);
 })();
 </script>
 </body>
