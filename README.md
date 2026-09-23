@@ -25,3 +25,13 @@ In the Firebase console, Realtime Database, Rules, add inside `"rules"`:
 ```
 
 Then paste the database address and the same sync code into Settings, Sync between devices, on each device. Anyone with the address and the code can read the synced books.
+
+## Working with the XTEINK X4
+The X4 runs Tom's CrossPoint firmware fork (https://github.com/tomoncupa/crosspoint-reader-ble, branch `tom-remote-tweaks`), whose main menu has iPad Sync.
+
+1. Set up sync above on the iPad.
+2. iPad reader: Settings, Sync between devices, Save setup file for my X4. It saves `ipad-sync.txt` (database address, sync code).
+3. X4: Network, File Transfer. Open the address it shows in Safari on the iPad and upload `ipad-sync.txt` to the top of the SD card.
+4. X4 main menu: iPad Sync. It downloads EPUB and TXT books to the top of the SD card and swaps reading places by percentage, then turns WiFi off.
+
+The iPad uploads its books by itself, one per sync, and publishes a light list at `reader/<code>/lite` for the X4. A place from the X4 is `{p, t, src: "x4"}`.
