@@ -283,7 +283,16 @@ function save() {
   if (!R.id || !R.book) return;
   const at = R.anchor >= 0 ? R.anchor : R.off;
   const valid = !R.fixed && at >= 0 && pageOfOffset(at) === R.pg;
-  Rows.setPos(R.id, { ch: R.ch, off: valid ? at : -1, f: R.pages > 1 ? R.pg / R.pages : 0, p: progress(), t: now() });
+  const row = { ch: R.ch, off: valid ? at : -1, f: R.pages > 1 ? R.pg / R.pages : 0, p: progress() };
+  // Opened at a place the X4 sent: say nothing back until a page is turned, or the
+  // iPad's rounding of that place would go to the X4 as if it were new reading.
+  if (R.quietUntilTurn) return;
+  // The same place saved again is not news. A fresh time on it would beat a newer
+  // place from the other device.
+  const old = Rows.pos(R.id);
+  if (old && old.ch === row.ch && old.off === row.off && (row.off >= 0 || Math.abs((old.f || 0) - row.f) < 1e-9)) return;
+  row.t = now();
+  Rows.setPos(R.id, row);
 }
 
 /* ---------- turning ---------- */
@@ -305,6 +314,7 @@ async function prev(opts = {}) {
   afterTurn(now(), 0, opts);
 }
 function afterTurn(t, read, opts) {
+  if (R.quietUntilTurn) { R.quietUntilTurn = false; save(); }
   Log.tick(read, 1);
   const dt = t - R.turnT;
   // learn how fast he reads, from turns he made himself
@@ -346,18 +356,20 @@ async function goToc(t) {
   }
   if (t.i >= 0) return loadChapter(t.i, t.frag ? { frag: t.frag } : { page: 0 });
 }
-function goPercent(p) {
+function percentTarget(p) {
   const w = weights();
   const tot = w.reduce((a, b) => a + b, 0);
   let acc = 0;
   for (let i = 0; i < w.length; i++) {
-    if (acc + w[i] >= p * tot || i === w.length - 1) {
-      const f = Math.max(0, Math.min(0.999, (p * tot - acc) / w[i]));
-      remember();
-      return loadChapter(i, { frac: f });
-    }
+    if (acc + w[i] >= p * tot || i === w.length - 1) return { i, f: Math.max(0, Math.min(0.999, (p * tot - acc) / w[i])) };
     acc += w[i];
   }
+  return { i: 0, f: 0 };
+}
+function goPercent(p) {
+  const at = percentTarget(p);
+  remember();
+  return loadChapter(at.i, { frac: at.f });
 }
 
 /* ---------- links and footnotes ---------- */
@@ -1051,7 +1063,7 @@ window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTi
 /* ---------- open and close ---------- */
 async function startReading(book, meta) {
   R.token++;
-  R.book = book; R.meta = meta; R.id = meta.id;
+  R.book = book; R.meta = meta; R.id = meta.id; R.quietUntilTurn = false;
   R.lens = meta.lens && meta.lens.length === book.count ? meta.lens : null;
   R.texts = []; R.history = []; R.turnT = now(); R.pg = 0; R.pages = 1; R.off = 0;
   store.set('last', meta.id);
@@ -1060,7 +1072,15 @@ async function startReading(book, meta) {
   $('tools').hidden = true;
   applySet();
   const pos = Rows.pos(meta.id) || { ch: 0, off: -1, f: 0 };
-  await loadChapter(Math.min(pos.ch || 0, book.count - 1), pos.off >= 0 ? { off: pos.off } : { frac: pos.f || 0 });
+  if (pos.ch == null && pos.p != null) {
+    // came from the X4, which keeps its place as a share of the book
+    const at = percentTarget(pos.p);
+    R.quietUntilTurn = true;
+    await loadChapter(at.i, { frac: at.f });
+    if (pos.src === 'x4') toast('Opened where you left off on the X4');
+  } else {
+    await loadChapter(Math.min(pos.ch || 0, book.count - 1), pos.off >= 0 ? { off: pos.off } : { frac: pos.f || 0 });
+  }
   Log.last = now();
   wake();
   measureBook();

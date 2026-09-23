@@ -58,6 +58,7 @@ async function importFiles(files) {
 function busy(t) { $('busy').hidden = !t; $('busy').textContent = t || ''; }
 
 async function openBookById(id) {
+  if (Sync.on()) await Promise.race([Sync.cycle(), wait(2500)]);
   const meta = await DB.book(id);
   if (!meta) { store.del('last'); return drawLib(); }
   let blob = await DB.file(id);

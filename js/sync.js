@@ -49,8 +49,15 @@ const Sync = {
       else if (kind === 'meta') {
         const b = await DB.book(id);
         const gone = store.get('gone.' + id);
-        if (b) up['meta/' + this.key(id)] = await this.metaOut(b);
-        else if (gone) { up['meta/' + this.key(id)] = { id, deleted: true, t: gone.t }; up['files/' + this.key(id)] = null; }
+        if (b) {
+          up['meta/' + this.key(id)] = await this.metaOut(b);
+          up['lite/' + this.key(id)] = { id, name: b.name || '', title: b.title || '', kind: b.kind || 'epub', size: b.size || 0, chunks: b.chunks || 0, t: b.t || 0 };
+        }
+        else if (gone) {
+          up['meta/' + this.key(id)] = { id, deleted: true, t: gone.t };
+          up['lite/' + this.key(id)] = { id, deleted: true, t: gone.t };
+          up['files/' + this.key(id)] = null;
+        }
       }
       else if (kind === 'log') up['log/' + id + '/' + this.dev()] = (store.get('log', {}))[id] || null;
     }
@@ -101,11 +108,30 @@ const Sync = {
     let changed = false;
     try {
       changed = await this.pull();
+      if (!store.get('liteDone')) {
+        // the X4 reads a light list of books; fill it for books synced before it existed
+        const d = store.get('dirty', {});
+        for (const b of await DB.books()) d['meta/' + b.id] = 1;
+        store.set('dirty', d);
+        store.set('liteDone', 1);
+      }
       await this.push();
+      await this.uploadOne();
       this.status('Synced at ' + new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }));
     } catch (e) { this.status('Not synced: ' + (e.message || e)); }
     finally { this.busy = false; }
     return changed;
+  },
+  /* books travel by themselves: one not-yet-uploaded book per sync, so the X4 can fetch it */
+  async uploadOne() {
+    if (this.uploading) return;
+    for (const b of await DB.books()) {
+      if (b.chunks || !(await DB.hasFile(b.id))) continue;
+      this.uploading = true;
+      try { await this.upload(b.id); } catch (e) { console.warn('upload', e); }
+      finally { this.uploading = false; }
+      return;
+    }
   },
   async upload(id, onStep) {
     const b = await DB.book(id), blob = await DB.file(id);
@@ -168,6 +194,10 @@ function openSync() {
         Sync.on() ? h('button', { text: 'Turn sync off', onclick: () => { store.del('sync'); Sync.status('Sync is off.'); closeSheet(); } }) : null),
       stat);
     if (Sync.on()) {
+      body.append(h('button', { class: 'pri wide', text: 'Save setup file for my X4', onclick: () => {
+        const c2 = Sync.cfg();
+        handOver(new File([c2.url + '\n' + c2.code + '\n'], 'ipad-sync.txt', { type: 'text/plain' }));
+      } }), h('p', { class: 'mut', text: 'Put ipad-sync.txt at the top of the X4\'s SD card: open the X4\'s address in Safari (X4 menu, Network, File Transfer) and upload it. Then iPad Sync on the X4 main menu brings over your books and places. The X4 opens EPUB and TXT; PDFs and Kindle files stay here.' }));
       body.append(h('button', { class: 'wide', text: 'Upload books for my other devices', onclick: async e => {
         const btn = e.target;
         const books = await DB.books();
