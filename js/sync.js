@@ -31,13 +31,16 @@ const Sync = {
   status(t) { this.lastMsg = t; store.set('syncStatus', t); const el = document.getElementById('syncstatus'); if (el) el.textContent = t; },
 
   async metaOut(b) {
-    const out = { id: b.id, title: b.title, author: b.author || '', kind: b.kind || 'epub', name: b.name || '', ext: b.ext || '', size: b.size || 0, added: b.added || 0, t: b.t || 0, shelf: b.shelf || '', finished: !!b.finished, count: b.count || 0, chunks: b.chunks || 0 };
+    const out = { id: b.id, title: b.title, author: b.author || '', kind: b.kind || 'epub', name: b.name || '', ext: b.ext || '', size: b.size || 0, added: b.added || 0, t: b.t || 0, shelf: b.shelf || '', finished: !!b.finished, count: b.count || 0, chunks: b.chunks || 0, pri: b.pri || 0 };
     if (b.cover && b.cover.size < 60000) out.cover = await blobToB64(b.cover);
     return out;
   },
   async push(keepalive) {
     if (!this.on()) return;
     const dirty = store.get('dirty', {}), keys = Object.keys(dirty);
+    // the iPad's time zone, so the X4 counts its minutes on the same days
+    const tz = -new Date().getTimezoneOffset();
+    if (store.get('tzSent') !== tz) keys.push('cfg/tz');
     if (!keys.length) return;
     const up = {};
     for (const k of keys) {
@@ -51,7 +54,7 @@ const Sync = {
         const gone = store.get('gone.' + id);
         if (b) {
           up['meta/' + this.key(id)] = await this.metaOut(b);
-          up['lite/' + this.key(id)] = { id, name: b.name || '', title: b.title || '', kind: b.kind || 'epub', size: b.size || 0, chunks: b.chunks || 0, t: b.t || 0 };
+          up['lite/' + this.key(id)] = { id, name: b.name || '', title: b.title || '', kind: b.kind || 'epub', size: b.size || 0, chunks: b.chunks || 0, t: b.t || 0, finished: !!b.finished, pri: b.pri || 0 };
         }
         else if (gone) {
           up['meta/' + this.key(id)] = { id, deleted: true, t: gone.t };
@@ -60,16 +63,18 @@ const Sync = {
         }
       }
       else if (kind === 'log') up['log/' + id + '/' + this.dev()] = (store.get('log', {}))[id] || null;
+      else if (kind === 'cfg') up['cfg/tz'] = tz;
     }
     await this.req('', 'PATCH', up, keepalive);
     const d2 = store.get('dirty', {});
     for (const k of keys) delete d2[k];
     store.set('dirty', d2);
     store.set('pushedAt', now());
+    store.set('tzSent', tz);
   },
   async pull() {
     if (!this.on()) return false;
-    const [meta, pos, marks, log] = await Promise.all(['/meta', '/pos', '/marks', '/log'].map(p => this.req(p)));
+    const [meta, pos, marks, log, x4] = await Promise.all(['/meta', '/pos', '/marks', '/log', '/x4'].map(p => this.req(p)));
     let changed = false;
     for (const k in meta || {}) {
       const m = meta[k], id = m.id || this.unkey(k);
@@ -79,7 +84,7 @@ const Sync = {
         continue;
       }
       if (gone && gone.t >= (m.t || 0)) continue;
-      const fields = { title: m.title, author: m.author, shelf: m.shelf, finished: m.finished, t: m.t, chunks: m.chunks || 0, kind: m.kind, name: m.name, ext: m.ext, size: m.size, count: m.count };
+      const fields = { title: m.title, author: m.author, shelf: m.shelf, finished: m.finished, pri: m.pri || 0, t: m.t, chunks: m.chunks || 0, kind: m.kind, name: m.name, ext: m.ext, size: m.size, count: m.count };
       if (!local) {
         await DB.putBook(Object.assign({ id, added: m.added || now(), remote: true, cover: m.cover ? b64ToBlob(m.cover, 'image/jpeg') : null }, fields));
         changed = true;
@@ -97,6 +102,11 @@ const Sync = {
       for (const mk in marks[k]) { const r = marks[k][mk], mid = this.unkey(mk); if (!all[mid] || (r.t || 0) > (all[mid].t || 0)) { all[mid] = r; ch = true; } }
       if (ch) { store.set('marks.' + id, all); changed = true; }
     }
+    // where the X4 is in each book, for "X4 · 42% · 2 h ago" in the library
+    for (const k in x4 || {}) {
+      const id = this.unkey(k), r = x4[k], l = store.get('x4.' + id);
+      if (r && (!l || (r.t || 0) > (l.t || 0))) { store.set('x4.' + id, r); changed = true; }
+    }
     const remote = {};
     for (const day in log || {}) for (const dv in log[day]) if (dv !== this.dev()) (remote[day] || (remote[day] = {}))[dv] = log[day][dv];
     store.set('logRemote', remote);
@@ -108,12 +118,12 @@ const Sync = {
     let changed = false;
     try {
       changed = await this.pull();
-      if (!store.get('liteDone')) {
-        // the X4 reads a light list of books; fill it for books synced before it existed
+      if (!store.get('liteDone2')) {
+        // the X4 reads a light list of books; fill it for books synced before it existed, or before it held finished
         const d = store.get('dirty', {});
         for (const b of await DB.books()) d['meta/' + b.id] = 1;
         store.set('dirty', d);
-        store.set('liteDone', 1);
+        store.set('liteDone2', 1);
       }
       await this.push();
       await this.uploadOne();
@@ -122,10 +132,12 @@ const Sync = {
     finally { this.busy = false; }
     return changed;
   },
-  /* books travel by themselves: one not-yet-uploaded book per sync, so the X4 can fetch it */
+  /* books travel by themselves: one not-yet-uploaded book per sync, so the X4 can fetch it.
+     "Send to X4 first" books go first. */
   async uploadOne() {
     if (this.uploading) return;
-    for (const b of await DB.books()) {
+    const books = (await DB.books()).sort((a, b) => (b.pri || 0) - (a.pri || 0));
+    for (const b of books) {
       if (b.chunks || !(await DB.hasFile(b.id))) continue;
       this.uploading = true;
       try { await this.upload(b.id); } catch (e) { console.warn('upload', e); }

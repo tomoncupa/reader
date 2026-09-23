@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Reader">
 <meta name="theme-color" content="#111111">
-<meta name="reader-version" content="2.0.1, 2026-09-23">
+<meta name="reader-version" content="2.1.0, 2026-09-23">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.json">
 <title>Reader</title>
@@ -37,7 +37,8 @@ textarea{min-height:120px;resize:vertical}
 #lib{position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(env(safe-area-inset-top) + 24px) 24px calc(env(safe-area-inset-bottom) + 40px)}
 #lib header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
 #lib h1{font-size:40px;margin:0;flex:1}
-#syncdot{font-size:16px;color:var(--mut);border:2px solid var(--line);border-radius:99px;padding:4px 12px}
+#syncdot{font-size:16px;color:var(--mut);background:none;border-radius:99px;font-weight:500}
+#today{font-size:18px;margin:0 0 10px}
 .filters{display:flex;gap:10px;margin-bottom:12px}
 .filters input{flex:1;min-width:0}
 .filters select{width:auto}
@@ -159,7 +160,7 @@ pre{white-space:pre-wrap;background:var(--bg);padding:12px;border-radius:10px;fo
 <div id="lib">
   <header>
     <h1>Reader</h1>
-    <span id="syncdot" hidden>Sync on</span>
+    <button id="syncdot" class="small" hidden aria-label="Sync now">Sync on</button>
     <button id="libset">Settings</button>
     <button id="add" class="pri">Add book</button>
   </header>
@@ -174,6 +175,7 @@ pre{white-space:pre-wrap;background:var(--bg);padding:12px;border-radius:10px;fo
       <option value="progress">Most read</option>
     </select>
   </div>
+  <p id="today" class="mut" hidden></p>
   <div id="shelves"></div>
   <div id="busy" hidden></div>
   <div id="list" class="grid"></div>

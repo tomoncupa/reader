@@ -125,16 +125,49 @@ async function drawLib() {
     if (b.cover) { const u = URL.createObjectURL(b.cover); coverUrls.push(u); cov = h('img', { src: u, alt: '' }); }
     else cov = h('div', { class: 'ph', text: b.title.slice(0, 40) });
     const status = b.finished ? 'Finished' : !local ? (b.chunks ? 'On another device: tap to download' : 'On another device') : p.t ? Math.floor((p.p || 0) * 100) + '% read' : 'Not started';
+    const x4 = store.get('x4.' + b.id);
     const card = h('div', { class: 'card' + (local ? '' : ' away') },
       h('button', { class: 'cover', onclick: () => openBookById(b.id), 'aria-label': 'Open ' + b.title }, cov,
         h('div', { class: 'prog' }, h('i', { style: 'width:' + (b.finished ? 100 : Math.floor((p.p || 0) * 100)) + '%' }))),
       h('div', { class: 'meta' },
-        h('button', { class: 'go', onclick: () => openBookById(b.id) }, h('div', { class: 't', text: b.title }), h('div', { class: 'a', text: b.author || '' }), h('div', { class: 's', text: status })),
+        h('button', { class: 'go', onclick: () => openBookById(b.id) }, h('div', { class: 't', text: b.title }), h('div', { class: 'a', text: b.author || '' }), h('div', { class: 's', text: status }), x4 && !b.finished ? h('div', { class: 's', text: 'X4 · ' + Math.floor((x4.p || 0) * 100) + '% · ' + ago(x4.t) }) : null),
         h('button', { class: 'dots', text: '•••', 'aria-label': 'Book options', onclick: () => bookMenu(b, local) })));
     grid.append(card);
   }
   $('syncdot').hidden = !Sync.on();
+  drawToday();
 }
+
+/* today's minutes, this iPad and every other device added together */
+function drawToday() {
+  const d = dayKey(), mine = (store.get('log', {})[d] || {}).ms || 0;
+  const others = (store.get('logRemote', {})[d]) || {};
+  const x4 = (others.x4 || {}).ms || 0;
+  let rest = 0;
+  for (const dev in others) if (dev !== 'x4') rest += others[dev].ms || 0;
+  const total = mine + x4 + rest;
+  $('today').hidden = total < 60000;
+  const parts = [];
+  if (mine >= 60000) parts.push('iPad ' + Math.round(mine / 60000));
+  if (x4 >= 60000) parts.push('X4 ' + Math.round(x4 / 60000));
+  if (rest >= 60000) parts.push('other ' + Math.round(rest / 60000));
+  $('today').textContent = 'Read today: ' + fmtMin(total / 60000) + (parts.length > 1 ? ' (' + parts.join(', ') + ')' : '');
+}
+function ago(t) {
+  const m = Math.round((now() - (t || 0)) / 60000);
+  if (m < 2) return 'just now';
+  if (m < 60) return m + ' min ago';
+  if (m < 48 * 60) return Math.round(m / 60) + ' h ago';
+  return Math.round(m / 1440) + ' days ago';
+}
+$('syncdot').onclick = async () => {
+  const el = $('syncdot');
+  el.textContent = 'Syncing…';
+  const ch = await Sync.cycle();
+  el.textContent = 'Sync on';
+  toast(Sync.lastMsg || 'Synced');
+  if (ch) drawLib(); else drawToday();
+};
 $('q').oninput = () => drawLib();
 $('sort').onchange = () => { S.sort = $('sort').value; saveS(); drawLib(); };
 $('add').onclick = () => $('file').click();
@@ -160,6 +193,12 @@ function bookMenu(b, local) {
     const setShelf = async s => { b.shelf = s; b.t = now(); await DB.putBook(b); Sync.mark('meta', b.id); closeSheet(); };
     body.append(shelfRow);
     if (local) body.append(it('Save a copy of the book file', async () => { const blob = await DB.file(b.id); handOver(new File([blob], (b.name || b.title + '.' + (b.ext || 'epub')).replace(/[\\/:*?"<>|]/g, ''), { type: blob.type || 'application/octet-stream' })); }));
+    if (local && Sync.on() && !b.finished && /^(epub|txt)$/.test(b.ext || b.kind || '')) body.append(it('Send to X4 first', async () => {
+      b.pri = now(); b.t = now(); await DB.putBook(b); Sync.mark('meta', b.id); closeSheet();
+      toast('Next on the X4. Syncing it now…');
+      try { if (!b.chunks) await Sync.upload(b.id); await Sync.push(); toast('Ready: iPad Sync on the X4 fetches it first'); }
+      catch (e) { alert('It did not upload: ' + e.message); }
+    }));
     if (local && Sync.on()) body.append(it(b.chunks ? 'Uploaded for your other devices' : 'Upload for your other devices', () => Sync.upload(b.id, (k, n) => toast('Uploading ' + Math.round(k / n * 100) + '%')).then(() => { toast('Uploaded'); closeSheet(); }, e => alert(e.message))));
     if (local) body.append(it('Remove the file from this iPad only (keep place and notes)', async () => {
       if (!b.chunks || !Sync.on()) { if (!confirm('Nothing else holds a copy of this book. Remove the file anyway?')) return; }
