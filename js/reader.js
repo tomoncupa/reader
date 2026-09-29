@@ -1079,7 +1079,10 @@ async function startReading(book, meta) {
     await loadChapter(at.i, { frac: at.f });
     if (pos.src === 'x4') toast('Opened where you left off on the X4');
   } else {
+    // a place taken from the X4 through Sync with X4: same quiet rule as above
+    if (pos.src === 'cps') R.quietUntilTurn = true;
     await loadChapter(Math.min(pos.ch || 0, book.count - 1), pos.off >= 0 ? { off: pos.off } : { frac: pos.f || 0 });
+    if (pos.src === 'cps') toast('Opened where you left off on ' + (pos.dev || 'the X4'));
   }
   Log.last = now();
   wake();
@@ -1102,5 +1105,6 @@ function closeBook() {
   Log.pause();
   unwake();
   Sync.push();
+  if (typeof KO !== 'undefined') KO.flush();
   drawLib();
 }

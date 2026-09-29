@@ -175,7 +175,7 @@ async function openEpub(blob) {
   const opf = xmlDoc(await z.text(opfPath));
   const base = dirOf(opfPath), man = {}, byPath = {};
   for (const it of tagsNS(opf, 'item')) {
-    const m = { id: it.getAttribute('id'), href: joinPath(base, it.getAttribute('href')), type: it.getAttribute('media-type') || '', props: it.getAttribute('properties') || '' };
+    const m = { id: it.getAttribute('id'), href: joinPath(base, it.getAttribute('href')), raw: it.getAttribute('href') || '', type: it.getAttribute('media-type') || '', props: it.getAttribute('properties') || '' };
     man[m.id] = m; byPath[m.href] = m;
   }
   const spine = [], spineProps = [];
@@ -186,6 +186,16 @@ async function openEpub(blob) {
     if (m && /html|xml/.test(m.type)) { spine.push(m.href); spineProps.push(r.getAttribute('properties') || ''); }
   }
   if (!spine.length) throw new Error('This EPUB has no chapters.');
+  // The X4's own list of chapters: every itemref, paths kept as written, sized by the unzipped
+  // file. Its percentages come from these sizes, so the iPad works them out the same way.
+  const x4Path = p => { const parts = p.split('/'), out = []; parts.forEach((c, k) => { if (!c) return; if (c === '..' && k < parts.length - 1) out.pop(); else out.push(c); }); return out.join('/'); };
+  const x4 = { paths: [], sizes: [] };
+  for (const r of tagsNS(opf, 'itemref')) {
+    const m = man[r.getAttribute('idref')];
+    if (!m) continue;
+    x4.paths.push(m.href);
+    x4.sizes.push((z.files.get(x4Path(base + m.raw)) || {}).usize || 0);
+  }
   const metas = tagsNS(opf, 'meta');
   const metaProp = p => (metas.find(m => m.getAttribute('property') === p) || {}).textContent;
   const fixedAll = (metaProp('rendition:layout') || '').trim() === 'pre-paginated';
@@ -250,6 +260,7 @@ async function openEpub(blob) {
     sizes: spine.map(p => Math.max(1, (z.find(p) || {}).usize || 1)),
     fixedAll,
     isFixed,
+    x4,
     pathOf: i => spine[i],
     async chapter(i, { images = true, urls = [] } = {}) {
       const path = spine[i], src = (await z.text(path)) || '';

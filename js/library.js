@@ -79,6 +79,7 @@ async function openBookById(id) {
   let book;
   try { book = await openBook(blob, meta); }
   catch (e) { busy(''); alert(e.message || e); return; }
+  if (KO.on()) { busy('Checking the X4\'s place…'); await KO.beforeOpen(book, meta); }
   busy('');
   await startReading(book, meta);
 }
@@ -233,7 +234,7 @@ function download(file) {
 async function backupAll(onStep) {
   const books = await DB.books();
   const data = { v: 1, made: now(), books: books.map(b => Object.assign({}, b, { cover: undefined })), local: {} };
-  for (const k of store.keys('')) if (!/^(settings|sync|dirty|device)/.test(k)) data.local[k] = store.get(k);
+  for (const k of store.keys('')) if (!/^(settings|sync|dirty|device|ko)/.test(k)) data.local[k] = store.get(k);
   const entries = [{ name: 'reader-backup.json', blob: new Blob([JSON.stringify(data)], { type: 'application/json' }) }];
   for (const b of books) {
     const f = await DB.file(b.id);
@@ -331,6 +332,7 @@ function openLibSettings() {
     for (const b of big) body.append(h('div', { class: 'sess' }, h('span', { text: b.title }), h('span', { text: fmtMB(b.size || 0) })));
 
     body.append(sec('More'),
+      h('button', { class: 'item', text: 'Sync with X4' + (KO.on() ? ' (on)' : ''), onclick: openX4Sync }),
       h('button', { class: 'item', text: 'Sync between devices' + (Sync.on() ? ' (on)' : ''), onclick: openSync }),
       h('button', { class: 'item', text: 'Remote buttons', onclick: openRemote }),
       h('button', { class: 'item', text: 'Text and page', onclick: openTextSettings }),

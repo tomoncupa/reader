@@ -106,7 +106,7 @@ const DB = {
 /* ---------- per-book rows kept in localStorage ---------- */
 const Rows = {
   pos(id) { return store.get('pos.' + id, null); },
-  setPos(id, v) { store.set('pos.' + id, v); Sync.mark('pos', id); },
+  setPos(id, v) { store.set('pos.' + id, v); Sync.mark('pos', id); if (typeof KO !== 'undefined') KO.moved(id, v); },
   marks(id) { return store.get('marks.' + id, {}); },
   liveMarks(id) { return Object.values(this.marks(id)).filter(m => !m.del); },
   putMark(bookId, m) {
